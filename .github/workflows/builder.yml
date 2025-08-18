@@ -8,7 +8,7 @@ on:
     workflow_dispatch:
 
 jobs:
-  create folder:
+  create_folder:
     name: Build
     runs-on: ubuntu-latest
     steps:
