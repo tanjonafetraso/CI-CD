@@ -1,4 +1,4 @@
-name: Java CI & Docker Deploy
+name: CI/CD avec Docker
 
 on:
   push:
@@ -8,12 +8,13 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # Télécharger le code
+      # 1. Télécharger le code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Installer JDK 17
+      # 2. Installer JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -21,41 +22,43 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Build Maven
+      # 3. Build avec Maven
       - name: Build with Maven
         run: mvn -Dmaven.test.skip=true -B package --file pom.xml
 
-      # Renommer le jar
-      - name: Rename jar
+      # 4. Renommer le jar en sa.jar
+      - name: Rename JAR
         run: mv target/*.jar target/sa.jar
 
-      # Copier le jar et le Dockerfile sur le serveur
+      # 5. Copier le JAR et le Dockerfile sur la VM
       - name: Copy files to remote server
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PRIVATE_KEY }}
+          key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           source: |
             target/sa.jar
             Dockerfile
           target: ~/opt/applications/sa
 
-      # Construire l'image Docker et lancer le container
+      # 6. Construire et lancer le container Docker sur la VM
       - name: Deploy Docker container
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PRIVATE_KEY }}
+          key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
             cd ~/opt/applications/sa
-            # Créer l'image Docker
+            echo "==> Build Docker image"
             docker build -t sa-app .
-            # Arrêter et supprimer l'ancien container si il existe
+            
+            echo "==> Stop and remove old container"
             docker stop sa-app || true
             docker rm sa-app || true
-            # Lancer le container
+            
+            echo "==> Run new container"
             docker run -d --name sa-app -p 8080:8080 sa-app
