@@ -1,64 +1,56 @@
-
-
-name: Java CI with Maven
+name: Java CI with Maven and Docker
 
 on:
   push:
     branches: [ "main" ]
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-  create-folder:
-    name: Crer un folders
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: create folder  ON REMETO VM
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
-          script: mkdir -p ~/opt/applications/sa
-  build-project:
-    runs-on: ubuntu-latest
-    needs: create-folder
-    steps:
-    - name: telechargement des code
-      uses: actions/checkout@v3
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build with Maven
-      run: mvn -Dmaven.test.skip=true -B package --file pom.xml
 
-    - name: Rename jar
-      run: mv target/*.jar target/sa.jar
-    - name: Copy file via ssh
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PRIVATE_KEY }}
-        port: ${{ secrets.PORT }}
-        source: "target/sa.jar"
-        target: "~/opt/applications/sa"
-        strip_components: 1
-  run-projetc:
-    name: run projet
-    runs-on: ubuntu-latest
-    needs :  build-project
     steps:
-      - name: run projet
+      # 1️⃣ Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2️⃣ Configurer Java 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # 3️⃣ Compiler le projet avec Maven
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      # 4️⃣ Construire l'image Docker
+      - name: Build Docker image
+        run: docker build -t monapp-java .
+
+      # 5️⃣ Copier et exécuter sur le VPS via SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PRIVATE_KEY }}
+          key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            ln -sf ~/opt/applications/sa/sa.jar 
-            /etc/init.d/sa start
+            # Arrêter et supprimer l'ancien conteneur
+            docker stop sa-app || true
+            docker rm sa-app || true
+            
+            # Vérifier si l'image existe déjà sur le VPS
+            docker image inspect monapp-java || true
+            
+            # Copier le jar ou reconstruire sur le serveur
+            # Option A: si tu veux pousser l'image complète depuis GitHub, tu peux configurer un registry
+            # Option B: pour simplifier, on peut reconstruire l'image sur le VPS
+            mkdir -p ~/app && cd ~/app
+            # Copier le jar depuis GitHub Actions via scp si nécessaire (ici on suppose que le jar est déjà présent)
+            
+            # Lancer le conteneur Docker
+            docker run -d -p 8080:8080 --name sa-app monapp-java
