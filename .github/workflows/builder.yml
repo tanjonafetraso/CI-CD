@@ -20,8 +20,7 @@ jobs:
           password: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: mkdir -p ~/opt/applications/sa
-  build:
-
+  build-project:
     runs-on: ubuntu-latest
     needs: create-folder
     steps:
@@ -47,3 +46,19 @@ jobs:
         port: ${{ secrets.PORT }}
         source: "target/sa.jar"
         target: "~/opt/applications/sa"
+        strip_components: 1
+  run-projetc:
+    name: run projet
+    runs-on: ubuntu-latest
+    needs :  build-project
+    steps:
+      - name: run projet
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            ln -sf ~/opt/applications/sa/sa.jar 
+            /etc/init.d/sa start
