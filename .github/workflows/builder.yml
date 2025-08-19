@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Télécharger le code
+      # 1. Télécharger le code source
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. Build avec Maven
+      # 3. Compiler avec Maven
       - name: Build with Maven
         run: mvn -Dmaven.test.skip=true -B package --file pom.xml
 
@@ -30,7 +30,21 @@ jobs:
       - name: Rename JAR
         run: mv target/*.jar target/sa.jar
 
-      # 5. Copier le JAR et le Dockerfile sur la VM
+      # 5. Vérifier connexion SSH (debug)
+      - name: Test SSH connection
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            whoami
+            hostname
+            mkdir -p ~/opt/applications/sa
+            ls -la ~/opt/applications/sa
+
+      # 6. Copier le JAR + Dockerfile sur le serveur
       - name: Copy files to remote server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -43,7 +57,7 @@ jobs:
             Dockerfile
           target: ~/opt/applications/sa
 
-      # 6. Construire et lancer le container Docker sur la VM
+      # 7. Construire et lancer le container Docker sur la VM
       - name: Deploy Docker container
         uses: appleboy/ssh-action@v1
         with:
@@ -56,7 +70,7 @@ jobs:
             echo "==> Build Docker image"
             docker build -t sa-app .
             
-            echo "==> Stop and remove old container"
+            echo "==> Stop old container"
             docker stop sa-app || true
             docker rm sa-app || true
             
