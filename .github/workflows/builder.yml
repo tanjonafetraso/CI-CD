@@ -1,4 +1,4 @@
-name: Java CI with Maven and Docker
+name: Java CI with Maven and Docker Deployment
 
 on:
   push:
@@ -26,11 +26,30 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      # 4️⃣ Construire l'image Docker
+      # 4️⃣ Créer le Dockerfile dans le workflow
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile <<EOF
+          # Étape 1 : construire l'application avec Maven
+          FROM maven:3.9.3-eclipse-temurin-17 AS build
+          WORKDIR /app
+          COPY pom.xml .
+          COPY src ./src
+          RUN mvn clean package -DskipTests
+
+          # Étape 2 : exécuter l'application
+          FROM eclipse-temurin:17-jdk
+          WORKDIR /app
+          COPY --from=build /app/target/sa.jar ./sa.jar
+          EXPOSE 8080
+          ENTRYPOINT ["java", "-jar", "sa.jar"]
+          EOF
+
+      # 5️⃣ Construire l'image Docker
       - name: Build Docker image
         run: docker build -t monapp-java .
 
-      # 5️⃣ Copier et exécuter sur le VPS via SSH
+      # 6️⃣ Déployer sur le VPS via SSH
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -39,18 +58,16 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            # Arrêter et supprimer l'ancien conteneur
+            # Créer un dossier pour l'application
+            mkdir -p ~/app
+            cd ~/app
+
+            # Arrêter et supprimer l'ancien conteneur si existant
             docker stop sa-app || true
             docker rm sa-app || true
-            
-            # Vérifier si l'image existe déjà sur le VPS
-            docker image inspect monapp-java || true
-            
-            # Copier le jar ou reconstruire sur le serveur
-            # Option A: si tu veux pousser l'image complète depuis GitHub, tu peux configurer un registry
-            # Option B: pour simplifier, on peut reconstruire l'image sur le VPS
-            mkdir -p ~/app && cd ~/app
-            # Copier le jar depuis GitHub Actions via scp si nécessaire (ici on suppose que le jar est déjà présent)
-            
+
+            # Copier le jar depuis GitHub Actions vers le VPS (optionnel)
+            # scp ou rsync peuvent être utilisés si nécessaire
+
             # Lancer le conteneur Docker
             docker run -d -p 8080:8080 --name sa-app monapp-java
