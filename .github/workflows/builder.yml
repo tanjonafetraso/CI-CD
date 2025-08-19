@@ -9,7 +9,7 @@ on:
 
 jobs:
   create-folder:
-    name: Build
+    name: Crer un folder
     runs-on: ubuntu-latest
     steps:
       - name: create folder  ON REMETO VM
@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          script: whoami
+          script: mkdir -p /opt/applications/sa
   build:
 
     runs-on: ubuntu-latest
