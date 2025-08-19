@@ -9,7 +9,7 @@ on:
 
 jobs:
   create-folder:
-    name: Crer un folder
+    name: Crer un folders
     runs-on: ubuntu-latest
     steps:
       - name: create folder  ON REMETO VM
