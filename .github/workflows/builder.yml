@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          script: mkdir -p /opt/applications/sa
+          script: mkdir -p ~/opt/applications/sa
   build:
 
     runs-on: ubuntu-latest
