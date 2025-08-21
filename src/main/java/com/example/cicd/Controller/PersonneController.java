@@ -10,5 +10,8 @@ public class PersonneController {
     @GetMapping("/hello")
     public String hello(){
         return "Bonjour personne p";
+    }@GetMapping("/hellos")
+    public String hellos(){
+        return "Bonjour personne pppppp";
     }
 }
