@@ -31,7 +31,7 @@ jobs:
       run: mv target/*.jar target/sa.jar
 
     - name: Copy file via ssh
-      uses: appleboy/ssh-action@v1
+      uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
