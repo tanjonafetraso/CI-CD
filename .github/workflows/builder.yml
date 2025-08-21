@@ -49,5 +49,5 @@ jobs:
             docker build -t monapplication .
             docker stop monapplication || true
             docker rm monapplication || true
-            docker run -d -p 8080:8080 monapplication
+            docker run -d --name monapplication -p 8080:8080 monapplication
             docker ps
